@@ -1049,38 +1049,69 @@ function renderTags(){
   ti.addEventListener("blur", add);
 }
 
-/* ─────────── الإملاء الصوتي (بدون تكرار الكلمات) ─────────── */
+/* ─────────── الإملاء الصوتي — مقاوم للتكرار على الهاتف ───────────
+   خلل معروف في كروم أندرويد: الوضع المتواصل يكرر الجُمل النهائية.
+   الحل: جلسات قصيرة (continuous=false) نعتمد نصّها النهائي مرة
+   واحدة فقط، ثم نعيد تشغيل الاستماع تلقائياً حتى يضغط المستخدم إيقاف. */
+let dictCommitted = "";
+function showDictText(extra){
+  editing.text = (dictCommitted + (extra ? " " + extra : "")).replace(/\s+/g," ").trimStart();
+  const fX = document.getElementById("fText");
+  if(fX){ fX.value = editing.text; autoGrow(fX); fX.scrollTop = fX.scrollHeight; }
+}
+function startDictSession(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  dictRec = new SR();
+  dictRec.lang = "ar-SA";
+  dictRec.continuous = false;      /* جلسة واحدة لكل جملة — يمنع التكرار */
+  dictRec.interimResults = true;   /* عرض حي أثناء الكلام */
+  dictRec.maxAlternatives = 1;
+  let sessionFinal = "";
+  dictRec.onresult = e=>{
+    sessionFinal = "";
+    let interim = "";
+    for(let i=e.resultIndex; i<e.results.length; i++){
+      const t = e.results[i][0].transcript;
+      if(e.results[i].isFinal) sessionFinal += t + " ";
+      else interim += t;
+    }
+    /* أثناء الجلسة: نعرض المعتمد سابقاً + كلام هذه الجلسة (بدون اعتماده بعد) */
+    showDictText(sessionFinal + interim);
+  };
+  dictRec.onend = ()=>{
+    /* نعتمد نص الجلسة مرة واحدة فقط هنا */
+    if(sessionFinal.trim()){
+      dictCommitted = (dictCommitted + " " + sessionFinal).replace(/\s+/g," ").trim();
+    }
+    showDictText("");
+    if(dictLive){
+      /* المستخدم لم يضغط إيقاف — نفتح جلسة استماع جديدة */
+      try{ startDictSession(); }catch(e){ dictLive=false; dictUI(); }
+    } else {
+      dictUI();
+    }
+  };
+  dictRec.onerror = e=>{
+    if(e.error==="not-allowed"){ dictLive=false; dictUI(); toast("اسمح بالوصول للميكروفون"); }
+    else if(e.error==="no-speech" && dictLive){ /* صمت — onend سيعيد التشغيل */ }
+    else if(dictLive && (e.error==="aborted"||e.error==="network")){ /* onend سيتكفل */ }
+  };
+  dictRec.start();
+}
 function toggleDictation(){
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if(!SR){ toast("الإملاء غير مدعوم في هذا المتصفح"); return; }
   if(dictLive){ stopDictation(); return; }
-  dictRec = new SR();
-  dictRec.lang="ar-SA"; dictRec.continuous=true; dictRec.interimResults=true;
-  baseText = editing.text ? editing.text.replace(/\s*$/,"")+" " : "";
-  let finalText = "";
-  dictRec.onresult = e=>{
-    finalText = "";
-    let interim = "";
-    for(let i=0; i<e.results.length; i++){
-      if(e.results[i].isFinal) finalText += e.results[i][0].transcript + " ";
-      else interim = e.results[i][0].transcript;
-    }
-    editing.text = (baseText + finalText + interim).replace(/\s+/g," ");
-    const fX = document.getElementById("fText");
-    if(fX){ fX.value = editing.text; autoGrow(fX); fX.scrollTop = fX.scrollHeight; }
-  };
-  dictRec.onend = ()=>{
-    /* نثبت النص النهائي فقط عند التوقف */
-    editing.text = (baseText + finalText).trim();
-    const fX = document.getElementById("fText");
-    if(fX){ fX.value = editing.text; autoGrow(fX); }
-    dictLive=false; dictUI();
-  };
-  dictRec.onerror = e=>{ dictLive=false; dictUI(); if(e.error==="not-allowed") toast("اسمح بالوصول للميكروفون"); };
-  dictLive = true; dictUI(); dictRec.start();
-  toast("🎙️ أنا أستمع… تحدّث الآن");
+  dictCommitted = editing.text ? editing.text.replace(/\s+$/,"") : "";
+  dictLive = true; dictUI();
+  try{ startDictSession(); toast("🎙️ أنا أستمع… تحدّث الآن"); }
+  catch(e){ dictLive=false; dictUI(); toast("تعذّر بدء الإملاء"); }
 }
-function stopDictation(){ if(dictRec){ try{dictRec.stop();}catch(e){} } dictLive=false; dictUI(); }
+function stopDictation(){
+  dictLive = false;
+  if(dictRec){ try{dictRec.stop();}catch(e){} }
+  dictUI();
+}
 function dictUI(){
   const b = document.getElementById("tDict"); if(!b) return;
   b.classList.toggle("live", dictLive); b.classList.toggle("pulse", dictLive);
