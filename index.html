@@ -7,6 +7,9 @@
 <meta name="theme-color" content="#5C4B63" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <title>مذكّراتي الذكية</title>
+<link id="favicon" rel="icon" type="image/png" />
+<link id="touchIcon" rel="apple-touch-icon" />
+<link id="pwaManifest" rel="manifest" />
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Almarai:wght@300;400;700&family=Aref+Ruqaa:wght@400;700&display=swap" rel="stylesheet">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -1276,6 +1279,81 @@ async function changePassword(){
 }
 
 boot();
+
+/* ─────────── أيقونة التطبيق — تُرسم بخط الرقعة نفسه ───────────
+   يرسم "مذكّراتي" مع القلم ✍️ على خلفية التدرج البنفسجي الوردي،
+   ويثبتها: أيقونة التبويب + أيقونة آيفون + مانيفست أندرويد/سطح المكتب */
+function drawAppIcon(size){
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = size;
+  const g = cv.getContext("2d");
+  const r = size * 0.225;                     /* زوايا دائرية */
+  g.beginPath();
+  g.moveTo(r,0); g.lineTo(size-r,0); g.arcTo(size,0,size,r,r);
+  g.lineTo(size,size-r); g.arcTo(size,size,size-r,size,r);
+  g.lineTo(r,size); g.arcTo(0,size,0,size-r,r);
+  g.lineTo(0,r); g.arcTo(0,0,r,0,r);
+  g.closePath(); g.clip();
+  /* خلفية التدرج نفسها */
+  const grad = g.createLinearGradient(0,0,size,size);
+  grad.addColorStop(0,"#4E3D57");
+  grad.addColorStop(.5,"#7A5C77");
+  grad.addColorStop(1,"#B37E88");
+  g.fillStyle = grad; g.fillRect(0,0,size,size);
+  /* نقاط ضوئية خفيفة كالترويسة */
+  g.fillStyle = "rgba(255,255,255,.14)";
+  for(let i=0;i<14;i++){
+    g.beginPath();
+    g.arc((i*97)%size, (i*61+30)%size, size*0.012, 0, 7);
+    g.fill();
+  }
+  /* القلم ✍️ */
+  g.textAlign = "center"; g.textBaseline = "middle";
+  g.font = Math.round(size*0.32)+"px serif";
+  g.fillText("✍️", size/2, size*0.34);
+  /* الاسم بخط الرقعة */
+  g.fillStyle = "#FFF7F0";
+  g.shadowColor = "rgba(0,0,0,.35)"; g.shadowBlur = size*0.02; g.shadowOffsetY = size*0.012;
+  g.font = "700 "+Math.round(size*0.235)+"px 'Aref Ruqaa', serif";
+  g.fillText("مذكّراتي", size/2, size*0.70);
+  return cv.toDataURL("image/png");
+}
+function installAppIcon(){
+  try{
+    const i32  = drawAppIcon(64);
+    const i180 = drawAppIcon(180);
+    const i192 = drawAppIcon(192);
+    const i512 = drawAppIcon(512);
+    document.getElementById("favicon").href = i32;
+    document.getElementById("touchIcon").href = i180;
+    const manifest = {
+      name: "مذكّراتي الذكية",
+      short_name: "مذكّراتي",
+      dir: "rtl", lang: "ar",
+      start_url: location.href.split("#")[0],
+      display: "standalone",
+      background_color: "#4E3D57",
+      theme_color: "#4E3D57",
+      icons: [
+        { src: i192, sizes: "192x192", type: "image/png", purpose: "any" },
+        { src: i512, sizes: "512x512", type: "image/png", purpose: "any" }
+      ]
+    };
+    document.getElementById("pwaManifest").href =
+      "data:application/manifest+json;charset=utf-8," + encodeURIComponent(JSON.stringify(manifest));
+  }catch(e){ /* الأيقونة تجميلية — لا نوقف التطبيق إن فشلت */ }
+}
+/* ننتظر تحميل خط الرقعة أولاً حتى تُرسم الأيقونة بالخط الصحيح */
+if(document.fonts && document.fonts.load){
+  Promise.all([
+    document.fonts.load("700 40px 'Aref Ruqaa'"),
+    document.fonts.ready
+  ]).then(installAppIcon).catch(installAppIcon);
+  /* احتياط: لو تأخر الخط أعد الرسم بعد ثانيتين */
+  setTimeout(installAppIcon, 2200);
+} else {
+  setTimeout(installAppIcon, 1200);
+}
 </script>
 </body>
 </html>
