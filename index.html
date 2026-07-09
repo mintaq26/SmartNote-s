@@ -1739,32 +1739,16 @@ function drawAppIcon(size){
     g.arc((i*97)%size, (i*61+30)%size, size*0.012, 0, 7);
     g.fill();
   }
-  /* ── القلم الذهبي — نفس قلم زر الإضافة في الصفحة ── */
-  const penGrad = g.createLinearGradient(size*0.3, size*0.1, size*0.7, size*0.45);
-  penGrad.addColorStop(0, "#F3D98B");
-  penGrad.addColorStop(.5, "#E9C46A");
-  penGrad.addColorStop(1, "#D98E73");
+  /* ── اليد والقلم ✍️ — نفس الإيموجي الملوّن الموجود في عنوان التطبيق ── */
   g.save();
-  /* نرسم في فضاء 24×24 (نفس مسار الأيقونة) مكبّراً ومائلاً قليلاً */
-  const ps = size * 0.020;                    /* معامل التكبير */
-  g.translate(size*0.50, size*0.255);
-  g.rotate(-0.12);
-  g.translate(-12*ps, -12*ps);
-  g.scale(ps, ps);
-  g.strokeStyle = penGrad;
-  g.lineWidth = 2.6;
-  g.lineCap = "round"; g.lineJoin = "round";
-  g.shadowColor = "rgba(0,0,0,.35)"; g.shadowBlur = 3; g.shadowOffsetY = 1.5;
-  /* الخط الأفقي: M12 20h9 */
-  g.beginPath(); g.moveTo(12,20); g.lineTo(21,20); g.stroke();
-  /* جسم القلم: M16.5 3.5 a2.1 2.1 0 0 1 3 3 L7 19 l-4 1 1-4 Z */
-  g.beginPath();
-  g.moveTo(16.5,3.5);
-  g.arc(18,5, 2.1, Math.PI*1.25, Math.PI*0.25);   /* رأس القلم المقوس */
-  g.lineTo(7,19); g.lineTo(3,20); g.lineTo(4,16); g.closePath();
-  g.stroke();
-  /* تعبئة ذهبية خفيفة داخل الجسم */
-  g.globalAlpha = 0.35; g.fillStyle = penGrad; g.fill(); g.globalAlpha = 1;
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  g.shadowColor = "rgba(0,0,0,.3)";
+  g.shadowBlur = size*0.02;
+  g.shadowOffsetY = size*0.012;
+  /* حجم كبير وواضح في النصف العلوي */
+  g.font = Math.round(size*0.40)+"px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
+  g.fillText("✍️", size*0.50, size*0.33);
   g.restore();
   /* ── الاسم بخط الرقعة — كبير يملأ العرض ── */
   g.textAlign = "center"; g.textBaseline = "middle";
@@ -1777,7 +1761,8 @@ function drawAppIcon(size){
     fs -= Math.max(1, Math.round(size*0.01));
     g.font = "700 "+fs+"px 'Aref Ruqaa', serif";
   }
-  g.fillText("مذكّراتي", size/2, size*0.66);
+  g.shadowColor = "rgba(0,0,0,.4)"; g.shadowBlur = size*0.025; g.shadowOffsetY = size*0.014;
+  g.fillText("مذكّراتي", size/2, size*0.68);
   return cv.toDataURL("image/png");
 }
 /* الأيقونة: نعتمد أولاً على ملفات PNG الحقيقية (icon-192.png ...).
